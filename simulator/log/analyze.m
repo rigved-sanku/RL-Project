@@ -1,0 +1,101 @@
+clear all
+close all
+load user_states.mat
+load MP.mat
+dt = 0.05
+
+plot3(x, y, z)
+hold on
+plot3(x_des, y_des, z_des)
+legend('xyz', 'xyz_{des}')
+xlabel('X')
+ylabel('Y')
+zlabel('Z')
+grid on 
+grid minor
+axis equal
+title('3D Trajectory Visualization')
+% 
+% figure
+% 
+% plot(diff(x)/dt, diff(y)/dt)
+% hold on
+% plot(diff(x_des)/dt, diff(y_des)/dt)
+
+
+% figure
+% plot(diff(diff(x))/dt/dt, diff(diff(y))/dt/dt)
+% hold on
+% plot(diff(diff(x_des)/dt)/dt, diff(diff(y_des)/dt)/dt)
+% plot(MP_MATRIX(7, :), MP_MATRIX(8, :))
+% 
+% legend('axyz', 'axyz_{des}', 'axyz_{des_actual}')
+% 
+figure
+grid on; grid minor; axis equal
+subplot(2, 3, 1)
+plot(time, x)
+hold on
+plot(time, x_des)
+xlabel('Time (s)')
+ylabel('X (m)')
+legend('X', 'X_{desired}')
+title('Position X')
+grid on; grid minor; axis square
+
+subplot(2,3,2)
+grid on; grid minor; axis equal
+plot(time, y)
+hold on
+plot(time, y_des)
+xlabel('Time (s)')
+ylabel('Y (m)')
+legend('Y', 'Y_{desired}')
+title('Position Y')
+
+grid on; grid minor; axis square
+
+subplot(2,3,3)
+grid on; grid minor; axis equal
+plot(time, z)
+hold on
+plot(time, z_des)
+xlabel('Time (s)')
+ylabel('Z (m)')
+legend('Z', 'Z_{desired}')
+title('Position Z')
+grid on; grid minor; axis square
+
+subplot(2,3, 4)
+grid on; grid minor; axis equal
+plot(time, vx)
+hold on
+plot(time, vx_des)
+xlabel('Time (s)')
+ylabel('VX (m/s)')
+legend('VX', 'VX_{desired}')
+title('Velocity X')
+grid on; grid minor; axis square
+
+subplot(2,3,5)
+grid on; grid minor; axis equal
+plot(time, vy)
+hold on
+plot(time, vy_des)
+xlabel('Time (s)')
+ylabel('VY (m/s)')
+legend('VY', 'VY_{desired}')
+title('Velocity Y')
+grid on; grid minor; axis square
+
+subplot(2,3,6)
+
+plot(time, vz)
+hold on
+plot(time, vz_des)
+xlabel('Time (s)')
+ylabel('VZ (m)')
+legend('VZ', 'VZ_{desired}')
+title('Velocity Z')
+grid on; grid minor; axis square
+
