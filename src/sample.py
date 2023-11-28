@@ -4,7 +4,6 @@ sys.path.append('./simulator')
 from env import Env
 import numpy as np
 import time
-# import cProfile
 
 def main():
     # The environment is simple threadsafe python object
@@ -16,12 +15,13 @@ def main():
     startTime = time.time()
 
     while not done:
-        u = np.array([0.00, 0.0, 0.0, 0.0])
+        u = np.array([0.01, 0.0, 0.0, 1])
         observations, reward, done, simtime = env.step(u)
 
-        print(observations)
+        # print(observations)
+        # print(reward)
+        # print(done)
     print(time.time() - startTime)
 
 
-# cProfile.run('main()')
 main()

@@ -126,18 +126,34 @@ class Env():
         curr_wp = self.waypoints_ned[self.curr_wp_idx]
         dist = np.linalg.norm(curr_wp - xyz)
 
-        if dist<0.2:
-            # waypoint complete
-            self.curr_wp_idx+=1
-            if self.curr_wp_idx >= len(self.waypoints_ned):
-                self.missionComplete = True
-                self.done = True
+        reward_mission = 0.
+        reward_wp = 0.
 
         reward_prog = (self.prevDist - dist)
         self.prevDist = dist
 
+        if dist<0.2:
+            # waypoint complete
+            reward_wp = 1.
+            self.curr_wp_idx+=1
+            if self.curr_wp_idx >= len(self.waypoints_ned):
+                self.missionComplete = True
+                self.done = True
+                reward_mission = 1.
+            else:
+                # prevent sudden jump in prevDist when wp changes!
+                curr_wp = self.waypoints_ned[self.curr_wp_idx]
+                dist = np.linalg.norm(curr_wp - xyz)
+                self.prevDist = dist
+
         # POPULATE OBSERVATIONS
-        observations = self.current_ned_state
+            # first 10 are position, velocity, quaternion 10
+            # current waypoint xyz is an additional observation 3
+            # previous actuator command 4
+        observations = np.zeros(17)
+        observations[0:10] = self.current_ned_state[0:10]
+        observations[10:13] = curr_wp
+        observations[13:17] = u
 
         # TERMINATION CONDITIONS
         if self.current_time>self.sim_stop_time:
@@ -150,20 +166,22 @@ class Env():
         if height<0:
             self.done = True
             self.hitGround = True
-            reward_crash = 10
+            reward_crash = 1
         if height>self.SAFE_MAX_HEIGHT:
             self.done = True
             self.heightTooLarge = True
-            reward_crash = 10
+            reward_crash = 1
         
         if np.max(self.current_ned_state)>self.SAFE_MAX or np.min(self.current_ned_state)<-self.SAFE_MAX:
             self.done = True
             self.maxStateReached = True
-            reward_crash = 10
+            reward_crash = 1
         
-        reward_actuator = np.linalg.norm(u) + np.linalg.norm(u - self.prevU)
+        reward_actuator = 0.5*np.linalg.norm(u) + np.linalg.norm(u - self.prevU)
         self.prevU = u
-        reward = 3*reward_prog -0.05*reward_actuator -reward_crash
+
+        # REWARD FUNCTION
+        reward = 100*reward_mission + 10*reward_wp + 3*reward_prog -0.5*reward_actuator -10*reward_crash
         # returns obs, reward, done
         return observations, reward, self.done, self.current_time
 
