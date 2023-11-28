@@ -1,5 +1,7 @@
 import numpy as np
 from pyquaternion import Quaternion
+from numba import jit
+
 
 def model_derivative(t, X, U, param):
     """
@@ -51,7 +53,7 @@ def quad_dynamics_der(X, T_prop, torq_prop, param):
     # Moment calculation (can be generalized for N rotor later if needed)
     M_rotor_thrust = np.array([0, 0.0, 0.0])
     for index in [0, 1, 2, 3]:
-        M_rotor_thrust += np.cross(param.rpos[index], np.array([0, 0, -T_prop[index]]))
+        M_rotor_thrust += npcross(param.rpos[index], np.array([0, 0, -T_prop[index]]))
 
     M_rotor_torq_z = np.dot([1, 1, -1, -1], torq_prop)
     M_rotor_torq = [0.0, 0.0, M_rotor_torq_z]
@@ -59,7 +61,6 @@ def quad_dynamics_der(X, T_prop, torq_prop, param):
     Mb = M_rotor_thrust + np.array(M_rotor_torq)
 
     return derivative_rigidBody(X, Fb, Mb, param)
-
 
 def derivative_rigidBody(X, Fb, Mb, param):
     # Fb - Net force in body frame
@@ -107,7 +108,7 @@ def derivative_rigidBody(X, Fb, Mb, param):
     # Angular velocity derivative
     I = param.inertiaMat
 
-    crossPart = np.cross(pqr.flatten(), np.ndarray.flatten(I@pqr))
+    crossPart = npcross(pqr.flatten(), np.ndarray.flatten(I@pqr))
     pqr_dot = np.linalg.inv(I)@(Mb - crossPart)
 
     # Position derivative
@@ -120,3 +121,12 @@ def derivative_rigidBody(X, Fb, Mb, param):
     X_dot = X_dot.reshape(-1, 1)
     
     return X_dot.flatten()
+
+def npcross(a, b):
+    # return np.cross(a, b)
+    # This cross product runs faster than np cross lol
+    a1, a2, a3 = a[0], a[1], a[2]
+    b1, b2, b3 = b[0], b[1], b[2]
+    cp = np.array([a2*b3 - b2*a3, a3*b1 - a1*b3, a1*b2 - a2*b1])
+    return cp
+    
