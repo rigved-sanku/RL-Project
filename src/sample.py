@@ -1,6 +1,8 @@
 import sys
 sys.path.append('./simulator')
 
+# How to run this file. From the folder containing sample.py, run python sample.py in terminal. install the required depenedencies such as scipy numpy pyquaternion
+
 from env import Env
 import numpy as np
 import time
@@ -18,7 +20,7 @@ def main():
         u = np.array([0.01, 0.0, 0.0, 1])
         observations, reward, done, simtime = env.step(u)
 
-        # print(observations)
+        print(observations)
         # print(reward)
         # print(done)
     print(time.time() - startTime)
