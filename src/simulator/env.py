@@ -89,6 +89,8 @@ class Env():
         self.stateArray = self.current_ned_state
         self.timeArray = 0
         self.controlArray = np.array([0., 0, 0, 0])
+        self.rewardArray = 0
+        self.activeWaypointsArray = np.array([0., 0, 0])
 
     def step(self, u):
         # u = [x_rate, y_rate, z_rate, throttle] list
@@ -116,10 +118,6 @@ class Env():
                                                                 U,
                                                                 tello)
                 self.current_time += self.dynamics_dt
-
-            # self.stateArray = np.vstack((self.stateArray, self.current_ned_state))
-            # self.controlArray = np.vstack((self.controlArray, U))
-            # self.timeArray = np.append(self.timeArray, self.current_time)
    
         # check if waypoint is complete or switch over
         xyz = self.current_ned_state[0:3]
@@ -182,15 +180,70 @@ class Env():
 
         # REWARD FUNCTION
         reward = 100*reward_mission + 10*reward_wp + 3*reward_prog -0.5*reward_actuator -10*reward_crash
-        # returns obs, reward, done
+
+        # Log the signals
+        self.stateArray = np.vstack((self.stateArray, self.current_ned_state))
+        self.controlArray = np.vstack((self.controlArray, U))
+        self.timeArray = np.append(self.timeArray, self.current_time)
+        self.rewardArray = np.append(self.rewardArray, reward)
+        self.activeWaypointsArray = np.vstack((self.activeWaypointsArray, self.waypoints_ned[self.curr_wp_idx]))
+
         return observations, reward, self.done, self.current_time
 
-    def log(self):
-        # SAVE LOGGED SIGNALS TO MAT FILE FOR POST PROCESSING IN MATLAB
-        loggedDict = {'time': self.timeArray,
-                    'state': self.stateArray,
-                    'control': self.controlArray}  
-        scipy.io.savemat('./log/states.mat', loggedDict)
+    def log(self, file):
+        # Externion will automagically be added. please give only file name with relative path
 
-    
-     
+        # SAVE LOGGED SIGNALS TO MAT FILE FOR POST PROCESSING IN MATLAB
+        # loggedDict = {'time': self.timeArray,
+        #             'state': self.stateArray,
+        #             'control': self.controlArray,
+        #             }
+        # scipy.io.savemat('./simulator/log/states.mat', loggedDict)
+
+        # import pdb
+        # pdb.set_trace()
+
+        np.savez(file + '_runtime', time=self.timeArray, state=self.stateArray, control=self.controlArray, reward=self.rewardArray, activeWP=self.activeWaypointsArray)
+        np.savez(file + '_config', wps=self.waypoints_ned)
+
+    def animate(self):
+        import matplotlib.pyplot as plt
+        import matplotlib.animation as animation
+        # python -m pip install PyQt5
+        # sudo apt-get install libqt5gui5
+
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plot Waypoints:
+        # Plot in enu frame
+        wp_x = self.waypoints_ned[:, 0]
+        wp_y = -self.waypoints_ned[:, 1]
+        wp_z = -self.waypoints_ned[:, 2]
+        for i in range(0, len(self.waypoints_ned)):
+            wpText = ax.text(wp_x[i], wp_y[i], wp_z[i], 'wp-'+str(i))
+        wp, = ax.plot(wp_x, wp_y, wp_z, 'bo')
+
+        # Plot Quad
+        point, = ax.plot([0], [0], [0], 'ro')
+        pointText = ax.text(0, 0, 0, "Quad")
+
+        def update(frame):
+            print(frame)
+            x = self.stateArray[frame, 0]
+            y = -self.stateArray[frame, 1]
+            z = -self.stateArray[frame, 2]
+            point.set_data(x, y)
+            point.set_3d_properties(z)
+            pointText.set_position_3d((x, y, z))
+
+            return (point, pointText)
+        
+        ani = animation.FuncAnimation(fig, update, frames = len(self.stateArray), interval=self.env_step_dt)
+        ax.set_xlim([-4, 4])
+        ax.set_ylim([-4, 4])
+        ax.set_zlim([-1, 10])
+        writervideo = animation.FFMpegWriter(fps=60) 
+
+        ani.save('animated.mp4', writer=writervideo)

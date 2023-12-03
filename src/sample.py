@@ -19,10 +19,13 @@ def main():
     while not done:
         u = np.array([0.01, 0.0, 0.0, 1])
         observations, reward, done, simtime = env.step(u)
-
         print(observations)
         # print(reward)
         # print(done)
+    
+    env.log('testlog')
+    env.animate()
+
     print(time.time() - startTime)
 
 
