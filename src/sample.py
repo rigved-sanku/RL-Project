@@ -27,6 +27,9 @@ def main():
     # log the current states of env 
     env.log('testlog')
     # animate right now and store into testvideo.mp4
+    # You may need to install the following
+    # python -m pip install PyQt5
+    # sudo apt-get install libqt5gui5
     env.animate('testvideo.mp4')
 
     # animate from the log. Can be called outside
