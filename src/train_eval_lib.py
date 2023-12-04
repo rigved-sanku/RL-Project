@@ -49,7 +49,7 @@ from tf_agents.train import ppo_learner
 from tf_agents.train import triggers
 from tf_agents.train.utils import spec_utils
 from tf_agents.train.utils import train_utils
-
+from drone_env_wrapper import DroneEnv
 
 class ReverbFixedLengthSequenceObserver(
     reverb_utils.ReverbAddTrajectoryObserver
@@ -81,14 +81,27 @@ class ReverbFixedLengthSequenceObserver(
     self._write_cached_steps()
 
 
+def eval_policy(policy, filename, iteration, num_episodes=1):
+  eval_env = DroneEnv()
+  
+  filename = f"{filename}{iteration}" + ".mp4"
+  for _ in range(num_episodes):
+    time_step = eval_env.reset()
+    while not time_step.is_last():
+      action_step = policy.action(time_step)
+      time_step = eval_env.step(action_step.action)
+    eval_env.animate(filename)
+  print(f"Stored evaluation in {filename}")
+
 @gin.configurable
 def train_eval(
     root_dir,
-    env_name='CartPole-v0',
+    evaluation_file_path,
+    env_name='Drone-v0',
     # Training params
     num_iterations=1600,
-    actor_fc_layers=(64, 64),
-    value_fc_layers=(64, 64),
+    actor_fc_layers=(256, 256),
+    value_fc_layers=(256, 256),
     learning_rate=3e-4,
     collect_sequence_length=2048,
     minibatch_size=64,
@@ -168,8 +181,8 @@ def train_eval(
     debug_summaries: Boolean for whether to gather debug summaries.
     summarize_grads_and_vars: If true, gradient summaries will be written.
   """
-  collect_env = suite_mujoco.load(env_name)
-  eval_env = suite_mujoco.load(env_name)
+  collect_env = DroneEnv()
+  eval_env = DroneEnv()
   num_environments = 1
 
   observation_tensor_spec, action_tensor_spec, time_step_tensor_spec = (
@@ -347,7 +360,7 @@ def train_eval(
         summary_dir=os.path.join(root_dir, 'eval'),
         episodes_per_run=eval_episodes,
     )
-
+    eval_policy(eval_greedy_policy,evaluation_file_path,0)
     eval_actor.run_and_log()
 
   logging.info('Training on %s', env_name)
@@ -377,6 +390,7 @@ def train_eval(
         or i == num_iterations - 1
     ):
       logging.info('Evaluating.')
+      eval_policy(eval_greedy_policy,evaluation_file_path,i)
       eval_actor.run_and_log()
       last_eval_step = agent_learner.train_step_numpy
 

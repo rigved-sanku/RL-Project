@@ -162,3 +162,4 @@ tutorials/trained-agent.mp4
 tutorials/ppo_tf_agent_example/schulman17/train/
 tutorials/ppo_tf_agent_example/schulman17/eval/
 tutorials/ppo_tf_agent_example/schulman17/policies/
+train_output/
