@@ -52,9 +52,9 @@ class Env():
         # Step the plant M times for every control action
         self.N = round(self.env_step_dt/self.control_dt)
         self.M = round(self.control_dt/self.dynamics_dt)
-
+        
         # reset for good measure
-        self.reset()    
+        self.observations = self.reset()    
     
     def reset(self, randomizeWPs = True):
         self.done = False
@@ -79,11 +79,13 @@ class Env():
 
         # INIT WAYPOINTS
         # TODO implement randomization
-        self.waypoints_ned = np.array([[0, 0, -7.0],
-                                  [2, 2, -7.0],
-                                  [2, -2, -7.0],
-                                  [-2, -2, -7.0],
-                                  [-2, 2, -7.0],
+        # self.waypoints_ned = np.array([[0, 0, -7.0],
+        #                           [2, 2, -7.0],
+        #                           [2, -2, -7.0],
+        #                           [-2, -2, -7.0],
+        #                           [-2, 2, -7.0],
+        #                          ])
+        self.waypoints_ned = np.array([[0, 0, -7.0]
                                  ])
         self.curr_wp_idx = 0
 
@@ -93,6 +95,12 @@ class Env():
         self.controlArray = np.array([0., 0, 0, 0])
         self.rewardArray = 0
         self.activeWaypointsArray = np.array([0., 0, 0])
+
+        observations = np.zeros(17)
+        observations[0:10] = self.current_ned_state[0:10]
+        observations[10:13] = self.waypoints_ned[0]
+        observations[13:17] = np.zeros(4) # RPYT (not rotor velocities, 1 future waypoint)
+        return observations.astype(np.float32).reshape((17,))
 
     def step(self, u):
         # u = [x_rate, y_rate, z_rate, throttle] list
@@ -105,7 +113,7 @@ class Env():
 
         if self.done == True:
             # early return
-            return [], 0, self.done, self.current_time
+            return self.observations, 0, self.done, self.current_time
         
         # Step the rate controller N times till time >= env_step_time
         for i in range(1, self.N+1):
@@ -132,19 +140,19 @@ class Env():
         reward_prog = (self.prevDist - dist)
         self.prevDist = dist
 
-        if dist<0.2:
-            # waypoint complete
-            reward_wp = 1.
-            self.curr_wp_idx+=1
-            if self.curr_wp_idx >= len(self.waypoints_ned):
-                self.missionComplete = True
-                self.done = True
-                reward_mission = 1.
-            else:
-                # prevent sudden jump in prevDist when wp changes!
-                curr_wp = self.waypoints_ned[self.curr_wp_idx]
-                dist = np.linalg.norm(curr_wp - xyz)
-                self.prevDist = dist
+        # if dist<0.2:
+        #     # waypoint complete
+        #     reward_wp = 1.
+        #     self.curr_wp_idx+=1
+        #     if self.curr_wp_idx >= len(self.waypoints_ned):
+        #         self.missionComplete = True
+        #         self.done = True
+        #         reward_mission = 1.
+        #     else:
+        #         # prevent sudden jump in prevDist when wp changes!
+        #         curr_wp = self.waypoints_ned[self.curr_wp_idx]
+        #         dist = np.linalg.norm(curr_wp - xyz)
+        #         self.prevDist = dist
 
         # POPULATE OBSERVATIONS
             # first 10 are position (-20.0 to 20.0), velocity (-20.0 to 20.0), quaternion (-1 to 1) 10
@@ -155,6 +163,7 @@ class Env():
         observations[10:13] = curr_wp
         observations[13:17] = u # RPYT (not rotor velocities, 1 future waypoint)
 
+        self.observations = observations.astype(np.float32).reshape((17,))
         # TERMINATION CONDITIONS
         if self.current_time>self.sim_stop_time:
             self.done = True
@@ -183,7 +192,7 @@ class Env():
         self.prevU = u
 
         # REWARD FUNCTION
-        reward = 100*reward_mission + 10*reward_wp + 3*reward_prog -0.5*reward_actuator -10*reward_crash
+        reward = 100*reward_mission + 10*reward_wp + 3*reward_prog -0.5*reward_actuator -50*reward_crash
 
         # Log the signals
         self.stateArray = np.vstack((self.stateArray, self.current_ned_state))
@@ -192,7 +201,7 @@ class Env():
         self.rewardArray = np.append(self.rewardArray, reward)
         self.activeWaypointsArray = np.vstack((self.activeWaypointsArray, self.waypoints_ned[self.curr_wp_idx]))
 
-        return observations, reward, self.done, self.current_time
+        return self.observations, reward, self.done, self.current_time
 
     def log(self, file):
         # Externion will automagically be added. please give only file name with relative path
