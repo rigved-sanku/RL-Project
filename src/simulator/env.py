@@ -153,12 +153,14 @@ class Env():
         observations = np.zeros(17)
         observations[0:10] = self.current_ned_state[0:10]
         observations[10:13] = curr_wp
-        observations[13:17] = u
+        observations[13:17] = u # RPYT (not rotor velocities, 1 future waypoint)
 
         # TERMINATION CONDITIONS
         if self.current_time>self.sim_stop_time:
             self.done = True
             self.timeExceeded = True
+            # if hover: 
+            #     self.missionComplete = True
 
         # Check height
         height = -self.current_ned_state[2]
