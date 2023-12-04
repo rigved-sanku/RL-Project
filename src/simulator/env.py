@@ -94,6 +94,12 @@ class Env():
         self.rewardArray = 0
         self.activeWaypointsArray = np.array([0., 0, 0])
 
+        observations = np.zeros(17)
+        observations[0:10] = self.current_ned_state[0:10]
+        observations[10:13] = self.waypoints_ned[0]
+        observations[13:17] = np.zeros(4) # RPYT (not rotor velocities, 1 future waypoint)
+        return observations
+
     def step(self, u):
         # u = [x_rate, y_rate, z_rate, throttle] list
         # Rates are between -1 and 1
