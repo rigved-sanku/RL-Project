@@ -21,11 +21,13 @@ import cProfile
 import quad_dynamics as qd
 import control
 import tello
+import visualizer
 
 # Force reload custom modules and run the latest code
 importlib.reload(control)
 importlib.reload(qd)
 importlib.reload(tello)
+importlib.reload(visualizer)
 
 class Env():
     def __init__(self):
@@ -145,9 +147,9 @@ class Env():
                 self.prevDist = dist
 
         # POPULATE OBSERVATIONS
-            # first 10 are position, velocity, quaternion 10
-            # current waypoint xyz is an additional observation 3
-            # previous actuator command 4
+            # first 10 are position (-20.0 to 20.0), velocity (-20.0 to 20.0), quaternion (-1 to 1) 10
+            # current waypoint xyz (-20.0 to 20.0)) is an additional observation 3
+            # previous actuator (-1 to 1) command 4
         observations = np.zeros(17)
         observations[0:10] = self.current_ned_state[0:10]
         observations[10:13] = curr_wp
@@ -204,46 +206,8 @@ class Env():
         # pdb.set_trace()
 
         np.savez(file + '_runtime', time=self.timeArray, state=self.stateArray, control=self.controlArray, reward=self.rewardArray, activeWP=self.activeWaypointsArray)
-        np.savez(file + '_config', wps=self.waypoints_ned)
+        np.savez(file + '_config', wps=self.waypoints_ned, env_step_dt=self.env_step_dt)
 
-    def animate(self):
-        import matplotlib.pyplot as plt
-        import matplotlib.animation as animation
-        # python -m pip install PyQt5
-        # sudo apt-get install libqt5gui5
-
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Plot Waypoints:
-        # Plot in enu frame
-        wp_x = self.waypoints_ned[:, 0]
-        wp_y = -self.waypoints_ned[:, 1]
-        wp_z = -self.waypoints_ned[:, 2]
-        for i in range(0, len(self.waypoints_ned)):
-            wpText = ax.text(wp_x[i], wp_y[i], wp_z[i], 'wp-'+str(i))
-        wp, = ax.plot(wp_x, wp_y, wp_z, 'bo')
-
-        # Plot Quad
-        point, = ax.plot([0], [0], [0], 'ro')
-        pointText = ax.text(0, 0, 0, "Quad")
-
-        def update(frame):
-            print(frame)
-            x = self.stateArray[frame, 0]
-            y = -self.stateArray[frame, 1]
-            z = -self.stateArray[frame, 2]
-            point.set_data(x, y)
-            point.set_3d_properties(z)
-            pointText.set_position_3d((x, y, z))
-
-            return (point, pointText)
-        
-        ani = animation.FuncAnimation(fig, update, frames = len(self.stateArray), interval=self.env_step_dt)
-        ax.set_xlim([-4, 4])
-        ax.set_ylim([-4, 4])
-        ax.set_zlim([-1, 10])
-        writervideo = animation.FFMpegWriter(fps=60) 
-
-        ani.save('animated.mp4', writer=writervideo)
+    def animate(self, file):
+        # pass file name with extension
+        visualizer.plot3d(file, self.waypoints_ned, self.stateArray, self.env_step_dt)

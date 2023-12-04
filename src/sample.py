@@ -6,6 +6,7 @@ sys.path.append('./simulator')
 from env import Env
 import numpy as np
 import time
+import visualizer
 
 def main():
     # The environment is simple threadsafe python object
@@ -23,8 +24,14 @@ def main():
         # print(reward)
         # print(done)
     
+    # log the current states of env 
     env.log('testlog')
-    env.animate()
+    # animate right now and store into testvideo.mp4
+    env.animate('testvideo.mp4')
+
+    # animate from the log. Can be called outside
+    visualizer.plot3dFromFile('testvideoFromLog.mp4', 'testlog')
+
 
     print(time.time() - startTime)
 
