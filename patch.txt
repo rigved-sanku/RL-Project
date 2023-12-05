@@ -1,0 +1,421 @@
+26a27,28
+> 
+>     get_annotations() - safely compute an object's annotations
+62a65,180
+> 
+> def get_annotations(obj, *, globals=None, locals=None, eval_str=False):
+>     """Compute the annotations dict for an object.
+> 
+>     obj may be a callable, class, or module.
+>     Passing in an object of any other type raises TypeError.
+> 
+>     Returns a dict.  get_annotations() returns a new dict every time
+>     it's called; calling it twice on the same object will return two
+>     different but equivalent dicts.
+> 
+>     This function handles several details for you:
+> 
+>       * If eval_str is true, values of type str will
+>         be un-stringized using eval().  This is intended
+>         for use with stringized annotations
+>         ("from __future__ import annotations").
+>       * If obj doesn't have an annotations dict, returns an
+>         empty dict.  (Functions and methods always have an
+>         annotations dict; classes, modules, and other types of
+>         callables may not.)
+>       * Ignores inherited annotations on classes.  If a class
+>         doesn't have its own annotations dict, returns an empty dict.
+>       * All accesses to object members and dict values are done
+>         using getattr() and dict.get() for safety.
+>       * Always, always, always returns a freshly-created dict.
+> 
+>     eval_str controls whether or not values of type str are replaced
+>     with the result of calling eval() on those values:
+> 
+>       * If eval_str is true, eval() is called on values of type str.
+>       * If eval_str is false (the default), values of type str are unchanged.
+> 
+>     globals and locals are passed in to eval(); see the documentation
+>     for eval() for more information.  If either globals or locals is
+>     None, this function may replace that value with a context-specific
+>     default, contingent on type(obj):
+> 
+>       * If obj is a module, globals defaults to obj.__dict__.
+>       * If obj is a class, globals defaults to
+>         sys.modules[obj.__module__].__dict__ and locals
+>         defaults to the obj class namespace.
+>       * If obj is a callable, globals defaults to obj.__globals__,
+>         although if obj is a wrapped function (using
+>         functools.update_wrapper()) it is first unwrapped.
+>     """
+>     if isinstance(obj, type):
+>         # class
+>         obj_dict = getattr(obj, '__dict__', None)
+>         if obj_dict and hasattr(obj_dict, 'get'):
+>             ann = obj_dict.get('__annotations__', None)
+>             if isinstance(ann, types.GetSetDescriptorType):
+>                 ann = None
+>         else:
+>             ann = None
+> 
+>         obj_globals = None
+>         module_name = getattr(obj, '__module__', None)
+>         if module_name:
+>             module = sys.modules.get(module_name, None)
+>             if module:
+>                 obj_globals = getattr(module, '__dict__', None)
+>         obj_locals = dict(vars(obj))
+>         unwrap = obj
+>     elif isinstance(obj, types.ModuleType):
+>         # module
+>         ann = getattr(obj, '__annotations__', None)
+>         obj_globals = getattr(obj, '__dict__')
+>         obj_locals = None
+>         unwrap = None
+>     elif callable(obj):
+>         # this includes types.Function, types.BuiltinFunctionType,
+>         # types.BuiltinMethodType, functools.partial, functools.singledispatch,
+>         # "class funclike" from Lib/test/test_inspect... on and on it goes.
+>         ann = getattr(obj, '__annotations__', None)
+>         obj_globals = getattr(obj, '__globals__', None)
+>         obj_locals = None
+>         unwrap = obj
+>     else:
+>         raise TypeError(f"{obj!r} is not a module, class, or callable.")
+> 
+>     if ann is None:
+>         return {}
+> 
+>     if not isinstance(ann, dict):
+>         raise ValueError(f"{obj!r}.__annotations__ is neither a dict nor None")
+> 
+>     if not ann:
+>         return {}
+> 
+>     if not eval_str:
+>         return dict(ann)
+> 
+>     if unwrap is not None:
+>         while True:
+>             if hasattr(unwrap, '__wrapped__'):
+>                 unwrap = unwrap.__wrapped__
+>                 continue
+>             if isinstance(unwrap, functools.partial):
+>                 unwrap = unwrap.func
+>                 continue
+>             break
+>         if hasattr(unwrap, "__globals__"):
+>             obj_globals = unwrap.__globals__
+> 
+>     if globals is None:
+>         globals = obj_globals
+>     if locals is None:
+>         locals = obj_locals
+> 
+>     return_value = {key:
+>         value if not isinstance(value, str) else eval(value, globals, locals)
+>         for key, value in ann.items() }
+>     return return_value
+> 
+> 
+179c297
+<     if not isfunction(f):
+---
+>     if not (isfunction(f) or _signature_is_functionlike(f)):
+280c398
+<         co_names            tuple of names of local variables
+---
+>         co_names            tuple of names other than arguments and function locals
+410c528
+<             if isinstance(v, types.DynamicClassAttribute):
+---
+>             if isinstance(v, types.DynamicClassAttribute) and v.fget is not None:
+665a784,785
+>             if object.__module__ == '__main__':
+>                 raise OSError('source code not available')
+709c829,832
+<     if getattr(getmodule(object, filename), '__loader__', None) is not None:
+---
+>     module = getmodule(object, filename)
+>     if getattr(module, '__loader__', None) is not None:
+>         return filename
+>     elif getattr(getattr(module, "__spec__", None), "loader", None) is not None:
+712c835
+<     if filename in linecache.cache:
+---
+>     elif filename in linecache.cache:
+739c862
+<     except TypeError:
+---
+>     except (TypeError, FileNotFoundError):
+867c990,995
+<             if pat.match(lines[lnum]): break
+---
+>             try:
+>                 line = lines[lnum]
+>             except IndexError:
+>                 raise OSError('lineno is out of bounds')
+>             if pat.match(line):
+>                 break
+927d1054
+<         self.decoratorhasargs = False
+928a1056
+>         self.body_col0 = None
+941,947d1068
+<         elif token == "(":
+<             if self.indecorator:
+<                 self.decoratorhasargs = True
+<         elif token == ")":
+<             if self.indecorator:
+<                 self.indecorator = False
+<                 self.decoratorhasargs = False
+955c1076
+<             if self.indecorator and not self.decoratorhasargs:
+---
+>             if self.indecorator:
+959a1081,1082
+>             if self.body_col0 is None and self.started:
+>                 self.body_col0 = erowcol[1]
+968a1092,1095
+>         elif type == tokenize.COMMENT:
+>             if self.body_col0 is not None and srowcol[1] >= self.body_col0:
+>                 # Include comments if indented at least as much as the block
+>                 self.last = srowcol[0]
+1153c1280,1281
+<                                        sigcls=Signature)
+---
+>                                        sigcls=Signature,
+>                                        eval_str=False)
+1223c1351,1356
+<         return repr(annotation).replace('typing.', '')
+---
+>         def repl(match):
+>             text = match.group()
+>             return text.removeprefix('typing.')
+>         return re.sub(r'[\w\.]+', repl, repr(annotation))
+>     if isinstance(annotation, types.GenericAlias):
+>         return str(annotation)
+1554,1560c1687,1694
+< def _check_instance(obj, attr):
+<     instance_dict = {}
+<     try:
+<         instance_dict = object.__getattribute__(obj, "__dict__")
+<     except AttributeError:
+<         pass
+<     return dict.get(instance_dict, attr, _sentinel)
+---
+> # def _check_instance(obj, attr):
+> #     instance_dict = {}
+> #     print(dir(obj))
+> #     try:
+> #         instance_dict = object.__getattribute__(obj, "__dict__")
+> #     except AttributeError:
+> #         pass
+> #     return dict.get(instance_dict, attr, _sentinel)
+1561a1696,1700
+> def _check_instance(obj, attr):
+>     instance_dict = getattr(obj, "__dict__", None)
+>     if instance_dict is not None:
+>         return instance_dict.get(attr, _sentinel)
+>     return _sentinel
+1886c2025
+<             isinstance(annotations, dict))
+---
+>             (isinstance(annotations, (dict)) or annotations is None) )
+1931c2070
+<     lines = [l.encode('ascii') for l in signature.split('\n')]
+---
+>     lines = [l.encode('ascii') for l in signature.split('\n') if l]
+2011d2149
+<     invalid = object()
+2035c2173
+<                 raise RuntimeError()
+---
+>                 raise ValueError
+2039c2177
+<         raise RuntimeError()
+---
+>         raise ValueError
+2049c2187
+<                 raise RuntimeError()
+---
+>                 raise ValueError
+2058a2197,2211
+>         def visit_BinOp(self, node):
+>             # Support constant folding of a couple simple binary operations
+>             # commonly used to define default values in text signatures
+>             left = self.visit(node.left)
+>             right = self.visit(node.right)
+>             if not isinstance(left, ast.Constant) or not isinstance(right, ast.Constant):
+>                 raise ValueError
+>             if isinstance(node.op, ast.Add):
+>                 return ast.Constant(left.value + right.value)
+>             elif isinstance(node.op, ast.Sub):
+>                 return ast.Constant(left.value - right.value)
+>             elif isinstance(node.op, ast.BitOr):
+>                 return ast.Constant(left.value | right.value)
+>             raise ValueError
+> 
+2061,2062d2213
+<         if name is invalid:
+<             return None
+2066c2217
+<                 o = ast.literal_eval(default_node)
+---
+>                 default = ast.literal_eval(default_node)
+2068,2071c2219
+<                 o = invalid
+<             if o is invalid:
+<                 return None
+<             default = o if o is not invalid else default
+---
+>                 raise ValueError("{!r} builtin has invalid signature".format(obj)) from None
+2138c2286,2287
+< def _signature_from_function(cls, func, skip_bound_arg=True):
+---
+> def _signature_from_function(cls, func, skip_bound_arg=True,
+>                              globals=None, locals=None, eval_str=False):
+2164c2313
+<     annotations = func.__annotations__
+---
+>     annotations = get_annotations(func, globals=globals, locals=locals, eval_str=eval_str)
+2234a2384,2386
+>                              globals=None,
+>                              locals=None,
+>                              eval_str=False,
+2240a2393,2400
+>     _get_signature_of = functools.partial(_signature_from_callable,
+>                                 follow_wrapper_chains=follow_wrapper_chains,
+>                                 skip_bound_arg=skip_bound_arg,
+>                                 globals=globals,
+>                                 locals=locals,
+>                                 sigcls=sigcls,
+>                                 eval_str=eval_str)
+> 
+2247,2251c2407
+<         sig = _signature_from_callable(
+<             obj.__func__,
+<             follow_wrapper_chains=follow_wrapper_chains,
+<             skip_bound_arg=skip_bound_arg,
+<             sigcls=sigcls)
+---
+>         sig = _get_signature_of(obj.__func__)
+2260c2416,2419
+<         obj = unwrap(obj, stop=(lambda f: hasattr(f, "__signature__")))
+---
+>         # Unwrap until we find an explicit signature or a MethodType (which will be
+>         # handled explicitly below).
+>         obj = unwrap(obj, stop=(lambda f: hasattr(f, "__signature__")
+>                                 or isinstance(f, types.MethodType)))
+2265,2269c2424
+<             return _signature_from_callable(
+<                 obj,
+<                 follow_wrapper_chains=follow_wrapper_chains,
+<                 skip_bound_arg=skip_bound_arg,
+<                 sigcls=sigcls)
+---
+>             return _get_signature_of(obj)
+2296,2300c2451
+<             wrapped_sig = _signature_from_callable(
+<                 partialmethod.func,
+<                 follow_wrapper_chains=follow_wrapper_chains,
+<                 skip_bound_arg=skip_bound_arg,
+<                 sigcls=sigcls)
+---
+>             wrapped_sig = _get_signature_of(partialmethod.func)
+2319c2470,2471
+<                                         skip_bound_arg=skip_bound_arg)
+---
+>                                         skip_bound_arg=skip_bound_arg,
+>                                         globals=globals, locals=locals, eval_str=eval_str)
+2326,2330c2478
+<         wrapped_sig = _signature_from_callable(
+<             obj.func,
+<             follow_wrapper_chains=follow_wrapper_chains,
+<             skip_bound_arg=skip_bound_arg,
+<             sigcls=sigcls)
+---
+>         wrapped_sig = _get_signature_of(obj.func)
+2341,2345c2489
+<             sig = _signature_from_callable(
+<                 call,
+<                 follow_wrapper_chains=follow_wrapper_chains,
+<                 skip_bound_arg=skip_bound_arg,
+<                 sigcls=sigcls)
+---
+>             sig = _get_signature_of(call)
+2347c2491
+<             # Now we check if the 'obj' class has a '__new__' method
+---
+>             factory_method = None
+2349,2356d2492
+<             if new is not None:
+<                 sig = _signature_from_callable(
+<                     new,
+<                     follow_wrapper_chains=follow_wrapper_chains,
+<                     skip_bound_arg=skip_bound_arg,
+<                     sigcls=sigcls)
+<             else:
+<                 # Finally, we should have at least __init__ implemented
+2358,2363c2494,2507
+<                 if init is not None:
+<                     sig = _signature_from_callable(
+<                         init,
+<                         follow_wrapper_chains=follow_wrapper_chains,
+<                         skip_bound_arg=skip_bound_arg,
+<                         sigcls=sigcls)
+---
+>             # Now we check if the 'obj' class has an own '__new__' method
+>             if '__new__' in obj.__dict__:
+>                 factory_method = new
+>             # or an own '__init__' method
+>             elif '__init__' in obj.__dict__:
+>                 factory_method = init
+>             # If not, we take inherited '__new__' or '__init__', if present
+>             elif new is not None:
+>                 factory_method = new
+>             elif init is not None:
+>                 factory_method = init
+> 
+>             if factory_method is not None:
+>                 sig = _get_signature_of(factory_method)
+2383c2527
+<                         # If 'obj' class has a __text_signature__ attribute:
+---
+>                         # If 'base' class has a __text_signature__ attribute:
+2385c2529
+<                         return _signature_fromstr(sigcls, obj, text_sig)
+---
+>                         return _signature_fromstr(sigcls, base, text_sig)
+2409,2413c2553
+<                 sig = _signature_from_callable(
+<                     call,
+<                     follow_wrapper_chains=follow_wrapper_chains,
+<                     skip_bound_arg=skip_bound_arg,
+<                     sigcls=sigcls)
+---
+>                 sig = _get_signature_of(call)
+2865c3005,3006
+<     def from_callable(cls, obj, *, follow_wrapped=True):
+---
+>     def from_callable(cls, obj, *,
+>                       follow_wrapped=True, globals=None, locals=None, eval_str=False):
+2868c3009,3010
+<                                         follow_wrapper_chains=follow_wrapped)
+---
+>                                         follow_wrapper_chains=follow_wrapped,
+>                                         globals=globals, locals=locals, eval_str=eval_str)
+3116c3258
+< def signature(obj, *, follow_wrapped=True):
+---
+> def signature(obj, *, follow_wrapped=True, globals=None, locals=None, eval_str=False):
+3118c3260,3261
+<     return Signature.from_callable(obj, follow_wrapped=follow_wrapped)
+---
+>     return Signature.from_callable(obj, follow_wrapped=follow_wrapped,
+>                                    globals=globals, locals=locals, eval_str=eval_str)
+3180a3324,3326
+> 
+> 
+> #### /home/ramu/miniconda3/envs/rl_project6/lib/python3.10/inspect.py
+\ No newline at end of file

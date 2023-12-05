@@ -6,6 +6,7 @@ sys.path.append('./simulator')
 from env import Env
 import numpy as np
 import time
+import visualizer
 
 def main():
     # The environment is simple threadsafe python object
@@ -19,10 +20,22 @@ def main():
     while not done:
         u = np.array([0.01, 0.0, 0.0, 1])
         observations, reward, done, simtime = env.step(u)
-
         print(observations)
         # print(reward)
         # print(done)
+    
+    # log the current states of env 
+    env.log('testlog')
+    # animate right now and store into testvideo.mp4
+    # You may need to install the following
+    # python -m pip install PyQt5
+    # sudo apt-get install libqt5gui5
+    env.animate('testvideo.mp4')
+
+    # animate from the log. Can be called outside
+    visualizer.plot3dFromFile('testvideoFromLog.mp4', 'testlog')
+
+
     print(time.time() - startTime)
 
 
