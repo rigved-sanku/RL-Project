@@ -100,10 +100,10 @@ def train_eval(
     env_name='Drone-v0',
     # Training params
     num_iterations=1600,
-    actor_fc_layers=(256, 256),
-    value_fc_layers=(256, 256),
+    actor_fc_layers=(16, 16),
+    value_fc_layers=(16, 16),
     learning_rate=3e-4,
-    collect_sequence_length=2048,
+    collect_sequence_length=100,
     minibatch_size=64,
     num_epochs=10,
     # Agent params

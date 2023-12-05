@@ -15,10 +15,16 @@ class DroneEnv(tf_agents.environments.py_environment.PyEnvironment):
                                                              maximum=[1.,1.,1.,1])
 
         
-        min_limits = np.array([-3.e+38,-3.e+38, -3.e+38, \
-            -3.e+38, -3.e+38, -3.e+38, \
+        # min_limits = np.array([-3.e+38,-3.e+38, -3.e+38, \
+        #     -3.e+38, -3.e+38, -3.e+38, \
+        #     -1.,-1.,-1.,-1., \
+        #     -3.e+38,-3.e+38,-3.e+38, \
+        #     -1.,-1.,-1.,-1.])
+        
+        min_limits = np.array([-50.,-50., -50., \
+            -50., -50., -50., \
             -1.,-1.,-1.,-1., \
-            -3.e+38,-3.e+38,-3.e+38, \
+            -50.,-50.,-50., \
             -1.,-1.,-1.,-1.])
         max_limits = -1*min_limits
 
