@@ -66,7 +66,7 @@ class Env():
 
         # INIT STATES
         self.current_time = 0.
-        xyz = np.array([0.0, 0.0, -0.5])
+        xyz = np.array([0.0, 0.0, -5])
         vxyz = np.array([0.0, 0.0, 0.0])
         quat = np.array([1.0, .0, .0, .0])
         pqr = np.array([0.0, .0, .0])

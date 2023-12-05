@@ -77,6 +77,7 @@ def plot3d(file, waypoints_ned, stateArray, env_step_dt):
 
     writervideo = animation.FFMpegWriter(fps=60)
     ani.save(file, writer=writervideo)
+    plt.close()
 
 
 def plot3dFromFile(outfile, infile):
