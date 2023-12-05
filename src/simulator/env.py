@@ -33,11 +33,11 @@ class Env():
     def __init__(self):
         # CONSTANTS
         self.fps = 20
-        self.SAFE_MAX = 50.
-        self.SAFE_MAX_HEIGHT = 50.
+        self.SAFE_MAX = 7.
+        self.SAFE_MAX_HEIGHT = 7
 
         # STOP time for simulation
-        self.sim_stop_time = 15
+        self.sim_stop_time = 5
 
         # INIT RENDERING AND CONTROL
         self.controller = control.quad_control()
@@ -66,7 +66,7 @@ class Env():
 
         # INIT STATES
         self.current_time = 0.
-        xyz = np.array([0.0, 0.0, -5.0])
+        xyz = np.array([0.0, 0.0, -0.5])
         vxyz = np.array([0.0, 0.0, 0.0])
         quat = np.array([1.0, .0, .0, .0])
         pqr = np.array([0.0, .0, .0])
@@ -140,19 +140,19 @@ class Env():
         reward_prog = (self.prevDist - dist)
         self.prevDist = dist
 
-        # if dist<0.2:
-        #     # waypoint complete
-        #     reward_wp = 1.
-        #     self.curr_wp_idx+=1
-        #     if self.curr_wp_idx >= len(self.waypoints_ned):
-        #         self.missionComplete = True
-        #         self.done = True
-        #         reward_mission = 1.
-        #     else:
-        #         # prevent sudden jump in prevDist when wp changes!
-        #         curr_wp = self.waypoints_ned[self.curr_wp_idx]
-        #         dist = np.linalg.norm(curr_wp - xyz)
-        #         self.prevDist = dist
+        if dist<0.2:
+            # waypoint complete
+            reward_wp = 1.
+            self.curr_wp_idx+=1
+            if self.curr_wp_idx >= len(self.waypoints_ned):
+                self.missionComplete = True
+                self.done = True
+                reward_mission = 1.
+            else:
+                # prevent sudden jump in prevDist when wp changes!
+                curr_wp = self.waypoints_ned[self.curr_wp_idx]
+                dist = np.linalg.norm(curr_wp - xyz)
+                self.prevDist = dist
 
         # POPULATE OBSERVATIONS
             # first 10 are position (-20.0 to 20.0), velocity (-20.0 to 20.0), quaternion (-1 to 1) 10
@@ -192,13 +192,16 @@ class Env():
         self.prevU = u
 
         # REWARD FUNCTION
-        reward = 100*reward_mission + 10*reward_wp + 3*reward_prog -0.5*reward_actuator -50*reward_crash
+        reward = 100*reward_mission + 10*reward_wp + 3*reward_prog -0.5*reward_actuator -5*reward_crash
 
         # Log the signals
         self.stateArray = np.vstack((self.stateArray, self.current_ned_state))
         self.controlArray = np.vstack((self.controlArray, U))
         self.timeArray = np.append(self.timeArray, self.current_time)
         self.rewardArray = np.append(self.rewardArray, reward)
+        # import pdb
+        # pdb.set_trace()
+
         self.activeWaypointsArray = np.vstack((self.activeWaypointsArray, self.waypoints_ned[self.curr_wp_idx]))
 
         return self.observations, reward, self.done, self.current_time
