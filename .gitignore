@@ -1,6 +1,8 @@
 *.slxc
 *.blend1
 *.zip
+*.MP4
+*.mp4
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
